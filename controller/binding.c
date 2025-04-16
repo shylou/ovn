@@ -1912,6 +1912,24 @@ consider_nonvif_lport_(const struct sbrec_port_binding *pb,
 
     if (our_chassis) {
         update_local_lports(pb->logical_port, b_ctx_out);
+
+        /*Add dgw LSP to local lports*/
+        enum en_lport_type lport_type = get_lport_type(pb);
+        if (lport_type == LP_CHASSISREDIRECT) {
+            const char *distributed_port = smap_get(&pb->options,
+                "distributed-port");
+            if (distributed_port) {
+                const struct sbrec_port_binding *peer;
+                const struct sbrec_port_binding *distributed_binding
+                    = lport_lookup_by_name(b_ctx_in->sbrec_port_binding_by_name,
+                                           distributed_port);
+                peer = lport_get_peer(distributed_binding,
+                                      b_ctx_in->sbrec_port_binding_by_name);
+                if (peer) {
+                    update_local_lports(peer->logical_port, b_ctx_out);
+                }
+            }
+        }
         if (!ld) {
             add_local_datapath(b_ctx_in->sbrec_datapath_binding_by_key,
                                b_ctx_in->sbrec_port_binding_by_datapath,
